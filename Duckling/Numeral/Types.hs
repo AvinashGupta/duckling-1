@@ -39,7 +39,7 @@ data NumeralData = NumeralData
 
 instance Resolve NumeralData where
   type ResolvedValue NumeralData = NumeralValue
-  resolve _ NumeralData {value} = Just NumeralValue {vValue = value}
+  resolve _ _ NumeralData {value} = Just (NumeralValue {vValue = value}, False)
 
 newtype NumeralValue = NumeralValue { vValue :: Double }
   deriving (Eq, Show)
@@ -57,9 +57,6 @@ getIntValue x = if rest == 0 then Just int else Nothing
 
 isInteger :: Double -> Bool
 isInteger = isJust . getIntValue
-
-isNatural :: Double -> Bool
-isNatural x = isInteger x && x > 0
 
 isIntegerBetween :: Double -> Int -> Int -> Bool
 isIntegerBetween x low high = case getIntValue x of

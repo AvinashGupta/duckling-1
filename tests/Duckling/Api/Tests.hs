@@ -8,25 +8,26 @@
 
 {-# LANGUAGE NoRebindableSyntax #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 
-module Duckling.Api.Tests (tests) where
+module Duckling.Api.Tests
+  ( tests
+  ) where
 
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
 import Data.List (sortOn)
 import Data.Text (Text)
 import Prelude
 import Test.Tasty
 import Test.Tasty.HUnit
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.HashSet as HashSet
 
 import Duckling.Api
 import Duckling.Dimensions.Types
-import Duckling.Lang
-import qualified Duckling.Numeral.Types as TNumeral
+import Duckling.Locale
 import Duckling.Testing.Asserts
 import Duckling.Testing.Types
 import Duckling.Types
+import qualified Duckling.Numeral.Types as TNumeral
 
 tests :: TestTree
 tests = testGroup "API Tests"
@@ -38,12 +39,12 @@ tests = testGroup "API Tests"
 
 parseTest :: TestTree
 parseTest = testCase "Parse Test" $
-  case parse sentence testContext [This Numeral] of
+  case parse sentence testContext testOptions [This Numeral] of
     [] -> assertFailure "empty result"
-    (Entity dim body value start end:_) -> do
+    (Entity dim body (RVal _ v) start end _ _:_) -> do
       assertEqual "dim" "number" dim
       assertEqual "body" "42" body
-      assertEqual "value" val (toJText value)
+      assertEqual "value" val (toJText v)
       assertEqual "start" 4 start
       assertEqual "end" 6 end
   where
@@ -82,7 +83,7 @@ rankFilterTest = testCase "Rank Filter Tests" $ do
   where
     check :: (Text, [Some Dimension], [Some Dimension]) -> IO ()
     check (sentence, targets, expected) =
-      let go = analyze sentence testContext $ HashSet.fromList targets
+      let go = analyze sentence testContext testOptions $ HashSet.fromList targets
           actual = flip map go $
                      \(Resolved{node=Node{token=Token d _}}) -> This d
       in assertEqual ("wrong winners for " ++ show sentence) expected actual
@@ -96,12 +97,12 @@ rankOrderTest = testCase "Rank Order Tests" $ do
     ]
   where
     check (s, targets) =
-      let tokens = analyze s testContext $ HashSet.fromList targets
+      let tokens = analyze s testContext testOptions $ HashSet.fromList targets
         in assertEqual "wrong ordering" (sortOn range tokens) tokens
 
 rangeTest :: TestTree
 rangeTest = testCase "Range Tests" $ do
-  mapM_ (analyzedFirstTest testContext) xs
+  mapM_ (analyzedFirstTest testContext testOptions) xs
   where
     xs = map (\(input, targets, range) -> (input, targets, f range))
              [ ( "order status 3233763377", [This PhoneNumber], Range 13 23 )
@@ -120,7 +121,8 @@ supportedDimensionsTest = testCase "Supported Dimensions Test" $ do
   mapM_ check
     [ ( AR
       , [ This Email, This AmountOfMoney, This PhoneNumber, This Url
-        , This Numeral, This Ordinal
+        , This Duration, This Numeral, This Ordinal, This Time, This Volume
+        , This Temperature, This Quantity
         ]
       )
     , ( PL
@@ -134,4 +136,5 @@ supportedDimensionsTest = testCase "Supported Dimensions Test" $ do
     check (l, expected) = case HashMap.lookup l supportedDimensions of
       Nothing -> assertFailure $ "no dimensions for " ++ show l
       Just actual ->
-        assertEqual ("wrong dimensions for " ++ show l) expected actual
+        assertEqual ("wrong dimensions for " ++ show l)
+        (HashSet.fromList expected) (HashSet.fromList actual)

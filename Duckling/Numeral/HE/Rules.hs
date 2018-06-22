@@ -9,7 +9,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Numeral.HE.Rules
-  ( rules ) where
+  ( rules
+  ) where
 
 import Data.Maybe
 import Data.String
@@ -28,7 +29,7 @@ ruleInteger5 :: Rule
 ruleInteger5 = Rule
   { name = "integer 4"
   , pattern =
-    [ regex "(\x05d0\x05e8\x05d1\x05e2(\x05d4)?)"
+    [ regex "(ארבע(ה)?)"
     ]
   , prod = \_ -> integer 4
   }
@@ -37,12 +38,12 @@ ruleIntersectNumerals :: Rule
 ruleIntersectNumerals = Rule
   { name = "intersect numbers"
   , pattern =
-    [ numberWith (fromMaybe 0 . TNumeral.grain) (>1)
-    , numberWith TNumeral.multipliable not
+    [ Predicate hasGrain
+    , Predicate $ and . sequence [not . isMultipliable, isPositive]
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = val1, TNumeral.grain = Just g}):
-       Token Numeral (NumeralData {TNumeral.value = val2}):
+      (Token Numeral NumeralData{TNumeral.value = val1, TNumeral.grain = Just g}:
+       Token Numeral NumeralData{TNumeral.value = val2}:
        _) | (10 ** fromIntegral g) > val2 -> double $ val1 + val2
       _ -> Nothing
   }
@@ -51,14 +52,14 @@ ruleIntersectWithAnd :: Rule
 ruleIntersectWithAnd = Rule
   { name = "intersect (with and)"
   , pattern =
-    [ numberWith (fromMaybe 0 . TNumeral.grain) (>1)
-    , regex "\x05d5"
-    , numberWith TNumeral.multipliable not
+    [ Predicate hasGrain
+    , regex "ו"
+    , Predicate isMultipliable
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = val1, TNumeral.grain = Just g}):
+      (Token Numeral NumeralData{TNumeral.value = val1, TNumeral.grain = Just g}:
        _:
-       Token Numeral (NumeralData {TNumeral.value = val2}):
+       Token Numeral NumeralData{TNumeral.value = val2}:
        _) | (10 ** fromIntegral g) > val2 -> double $ val1 + val2
       _ -> Nothing
   }
@@ -71,8 +72,8 @@ ruleCompositeTens = Rule
     , numberBetween 1 10
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = tens}):
-       Token Numeral (NumeralData {TNumeral.value = units}):
+      (Token Numeral NumeralData{TNumeral.value = tens}:
+       Token Numeral NumeralData{TNumeral.value = units}:
        _) -> double $ tens + units
       _ -> Nothing
   }
@@ -82,13 +83,13 @@ ruleCompositeTensWithAnd = Rule
   { name = "integer 21..99 (with and)"
   , pattern =
     [ oneOf [ 20, 30..90 ]
-    , regex "\x05d5"
+    , regex "ו"
     , numberBetween 1 10
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = tens}):
+      (Token Numeral NumeralData{TNumeral.value = tens}:
        _:
-       Token Numeral (NumeralData {TNumeral.value = units}):
+       Token Numeral NumeralData{TNumeral.value = units}:
        _) -> double $ tens + units
       _ -> Nothing
   }
@@ -97,24 +98,11 @@ ruleNumeralsPrefixWithNegativeOrMinus :: Rule
 ruleNumeralsPrefixWithNegativeOrMinus = Rule
   { name = "numbers prefix with -, negative or minus"
   , pattern =
-    [ regex "-|\x05de\x05d9\x05e0\x05d5\x05e1"
-    , dimension Numeral
+    [ regex "-|מינוס"
+    , Predicate isPositive
     ]
   , prod = \tokens -> case tokens of
       (_:Token Numeral nd:_) -> double (TNumeral.value nd * (-1))
-      _ -> Nothing
-  }
-
-ruleIntegerNumeric :: Rule
-ruleIntegerNumeric = Rule
-  { name = "integer (numeric)"
-  , pattern =
-    [ regex "(\\d{1,18})"
-    ]
-  , prod = \tokens -> case tokens of
-      (Token RegexMatch (GroupMatch (match:_)):_) -> do
-        v <- toInteger <$> parseInt match
-        integer v
       _ -> Nothing
   }
 
@@ -122,7 +110,7 @@ ruleInteger10 :: Rule
 ruleInteger10 = Rule
   { name = "integer 9"
   , pattern =
-    [ regex "(\x05ea\x05e9\x05e2(\x05d4)?)"
+    [ regex "(תשע(ה)?)"
     ]
   , prod = \_ -> integer 9
   }
@@ -131,18 +119,18 @@ ruleInteger15 :: Rule
 ruleInteger15 = Rule
   { name = "integer (20..90)"
   , pattern =
-    [ regex "(\x05e2\x05e9\x05e8\x05d9\x05dd|\x05e9\x05dc\x05d5\x05e9\x05d9\x05dd|\x05d0\x05e8\x05d1\x05e2\x05d9\x05dd|\x05d7\x05de\x05d9\x05e9\x05d9\x05dd|\x05e9\x05d9\x05e9\x05d9\x05dd|\x05e9\x05d1\x05e2\x05d9\x05dd|\x05e9\x05de\x05d5\x05e0\x05d9\x05dd|\x05ea\x05e9\x05e2\x05d9\x05dd)"
+    [ regex "(עשרים|שלושים|ארבעים|חמישים|שישים|שבעים|שמונים|תשעים)"
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) -> case match of
-        "\x05e2\x05e9\x05e8\x05d9\x05dd" -> integer 20
-        "\x05e9\x05dc\x05d5\x05e9\x05d9\x05dd" -> integer 30
-        "\x05d0\x05e8\x05d1\x05e2\x05d9\x05dd" -> integer 40
-        "\x05d7\x05de\x05d9\x05e9\x05d9\x05dd" -> integer 50
-        "\x05e9\x05d9\x05e9\x05d9\x05dd" -> integer 60
-        "\x05e9\x05d1\x05e2\x05d9\x05dd" -> integer 70
-        "\x05e9\x05de\x05d5\x05e0\x05d9\x05dd" -> integer 80
-        "\x05ea\x05e9\x05e2\x05d9\x05dd" -> integer 90
+        "עשרים" -> integer 20
+        "שלושים" -> integer 30
+        "ארבעים" -> integer 40
+        "חמישים" -> integer 50
+        "שישים" -> integer 60
+        "שבעים" -> integer 70
+        "שמונים" -> integer 80
+        "תשעים" -> integer 90
         _ -> Nothing
       _ -> Nothing
   }
@@ -162,7 +150,7 @@ ruleInteger3 :: Rule
 ruleInteger3 = Rule
   { name = "integer 2"
   , pattern =
-    [ regex "(\x05e9\x05ea\x05d9\x05d9\x05dd|\x05e9\x05e0\x05d9\x05d9\x05dd)"
+    [ regex "(שתיים|שניים)"
     ]
   , prod = \_ -> integer 2
   }
@@ -171,7 +159,7 @@ ruleSingle :: Rule
 ruleSingle = Rule
   { name = "single"
   , pattern =
-    [ regex "\x05d9\x05d7\x05d9\x05d3"
+    [ regex "יחיד"
     ]
   , prod = \_ -> integer 1
   }
@@ -180,7 +168,7 @@ ruleInteger13 :: Rule
 ruleInteger13 = Rule
   { name = "integer 12"
   , pattern =
-    [ regex "(\x05e9\x05e0\x05d9\x05d9\x05dd \x05e2\x05e9\x05e8|\x05ea\x05e8\x05d9 \x05e2\x05e9\x05e8)"
+    [ regex "(שניים עשר|תרי עשר)"
     ]
   , prod = \_ -> integer 12
   }
@@ -201,7 +189,7 @@ ruleInteger6 :: Rule
 ruleInteger6 = Rule
   { name = "integer 5"
   , pattern =
-    [ regex "(\x05d7\x05de(\x05e9|\x05d9\x05e9\x05d4))"
+    [ regex "(חמ(ש|ישה))"
     ]
   , prod = \_ -> integer 5
   }
@@ -210,21 +198,21 @@ rulePowersOfTen :: Rule
 rulePowersOfTen = Rule
   { name = "powers of tens"
   , pattern =
-    [ regex "(\x05de\x05d0(\x05d4|\x05d5\x05ea)|\x05d0\x05dc(\x05e3|\x05e4\x05d9\x05dd)|\x05de\x05d9\x05dc\x05d9\x05d5(\x05df|\x05e0\x05d9\x05dd))"
+    [ regex "(מא(ה|ות)|אל(ף|פים)|מיליו(ן|נים))"
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) -> case Text.toLower match of
-        "\x05de\x05d0\x05d4"                               ->
+        "מאה"                               ->
           double 1e2 >>= withGrain 2 >>= withMultipliable
-        "\x05de\x05d0\x05d5\x05ea"                         ->
+        "מאות"                         ->
           double 1e2 >>= withGrain 2 >>= withMultipliable
-        "\x05d0\x05dc\x05e3"                               ->
+        "אלף"                               ->
           double 1e3 >>= withGrain 3 >>= withMultipliable
-        "\x05d0\x05dc\x05e4\x05d9\x05dd"                   ->
+        "אלפים"                   ->
           double 1e3 >>= withGrain 3 >>= withMultipliable
-        "\x05de\x05d9\x05dc\x05d9\x05d5\x05df"             ->
+        "מיליון"             ->
           double 1e6 >>= withGrain 6 >>= withMultipliable
-        "\x05de\x05d9\x05dc\x05d9\x05d5\x05e0\x05d9\x05dd" ->
+        "מיליונים" ->
           double 1e6 >>= withGrain 6 >>= withMultipliable
         _          -> Nothing
       _ -> Nothing
@@ -234,7 +222,7 @@ ruleInteger7 :: Rule
 ruleInteger7 = Rule
   { name = "integer 6"
   , pattern =
-    [ regex "(\x05e9\x05e9(\x05d4)?)"
+    [ regex "(שש(ה)?)"
     ]
   , prod = \_ -> integer 6
   }
@@ -247,8 +235,8 @@ ruleInteger14 = Rule
     , numberWith TNumeral.value (== 10)
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v1}):
-       Token Numeral (NumeralData {TNumeral.value = v2}):
+      (Token Numeral NumeralData{TNumeral.value = v1}:
+       Token Numeral NumeralData{TNumeral.value = v2}:
        _) -> double $ v1 + v2
       _ -> Nothing
   }
@@ -257,7 +245,7 @@ ruleInteger8 :: Rule
 ruleInteger8 = Rule
   { name = "integer 7"
   , pattern =
-    [ regex "(\x05e9\x05d1\x05e2(\x05d4)?)"
+    [ regex "(שבע(ה)?)"
     ]
   , prod = \_ -> integer 7
   }
@@ -266,7 +254,7 @@ ruleCouple :: Rule
 ruleCouple = Rule
   { name = "couple"
   , pattern =
-    [ regex "\x05d6\x05d5\x05d2( \x05e9\x05dc)?"
+    [ regex "זוג( של)?"
     ]
   , prod = \_ -> integer 2
   }
@@ -279,8 +267,8 @@ ruleInteger16 = Rule
     , numberBetween 1 100
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v1}):
-       Token Numeral (NumeralData {TNumeral.value = v2}):
+      (Token Numeral NumeralData{TNumeral.value = v1}:
+       Token Numeral NumeralData{TNumeral.value = v2}:
        _) -> double $ v1 + v2
       _ -> Nothing
   }
@@ -289,7 +277,7 @@ ruleInteger9 :: Rule
 ruleInteger9 = Rule
   { name = "integer 8"
   , pattern =
-    [ regex "(\x05e9\x05de\x05d5\x05e0\x05d4)"
+    [ regex "(שמונה)"
     ]
   , prod = \_ -> integer 8
   }
@@ -298,7 +286,7 @@ ruleInteger :: Rule
 ruleInteger = Rule
   { name = "integer 0"
   , pattern =
-    [ regex "(\x05d0\x05e4\x05e1|\x05db\x05dc\x05d5\x05dd)"
+    [ regex "(אפס|כלום)"
     ]
   , prod = \_ -> integer 0
   }
@@ -307,7 +295,7 @@ ruleInteger4 :: Rule
 ruleInteger4 = Rule
   { name = "integer 3"
   , pattern =
-    [ regex "(\x05e9\x05dc\x05d5\x05e9(\x05d4)?)"
+    [ regex "(שלוש(ה)?)"
     ]
   , prod = \_ -> integer 3
   }
@@ -316,7 +304,7 @@ ruleInteger2 :: Rule
 ruleInteger2 = Rule
   { name = "integer 1"
   , pattern =
-    [ regex "(\x05d0\x05d7\x05d3|\x05d0\x05d7\x05ea)"
+    [ regex "(אחד|אחת)"
     ]
   , prod = \_ -> integer 1
   }
@@ -325,7 +313,7 @@ ruleInteger11 :: Rule
 ruleInteger11 = Rule
   { name = "integer 10"
   , pattern =
-    [ regex "(\x05e2\x05e9\x05e8(\x05d4)?)"
+    [ regex "(עשר(ה)?)"
     ]
   , prod = \_ -> integer 10
   }
@@ -335,8 +323,8 @@ ruleNumeralDotNumeral = Rule
   { name = "number dot number"
   , pattern =
     [ dimension Numeral
-    , regex "\x05e0\x05e7\x05d5\x05d3\x05d4"
-    , numberWith TNumeral.grain isNothing
+    , regex "נקודה"
+    , Predicate $ not . hasGrain
     ]
   , prod = \tokens -> case tokens of
       (Token Numeral nd1:_:Token Numeral nd2:_) ->
@@ -352,7 +340,7 @@ ruleCommas = Rule
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) ->
-        parseDouble (Text.replace (Text.singleton ',') Text.empty match) >>= double
+        parseDouble (Text.replace "," Text.empty match) >>= double
       _ -> Nothing
   }
 
@@ -378,7 +366,6 @@ rules =
   , ruleInteger7
   , ruleInteger8
   , ruleInteger9
-  , ruleIntegerNumeric
   , ruleIntersectNumerals
   , ruleIntersectWithAnd
   , ruleMultiply

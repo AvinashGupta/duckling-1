@@ -18,14 +18,14 @@ import Data.String
 import Duckling.Dimensions.Types
 import Duckling.Temperature.Helpers
 import qualified Duckling.Temperature.Types as TTemperature
-import Duckling.Types
+import Duckling.Types hiding (isLatent)
 
 ruleLatentTempDegrees :: Rule
 ruleLatentTempDegrees = Rule
   { name = "<latent temp> degrees"
   , pattern =
-    [ Predicate isLatent
-    , regex "\xb3c4|\x00b0"
+    [ Predicate $ isValueOnly False
+    , regex "도|°"
     ]
   , prod = \tokens -> case tokens of
       (Token Temperature td:_) -> Just . Token Temperature $
@@ -37,8 +37,8 @@ ruleTemp :: Rule
 ruleTemp = Rule
   { name = "섭씨 <temp>"
   , pattern =
-    [ regex "\xc12d\xc528"
-    , dimension Temperature
+    [ regex "섭씨"
+    , Predicate $ isValueOnly True
     ]
   , prod = \tokens -> case tokens of
       (_:Token Temperature td:_) -> Just . Token Temperature $
@@ -50,7 +50,7 @@ ruleTempC :: Rule
 ruleTempC = Rule
   { name = "<temp> °C"
   , pattern =
-    [ dimension Temperature
+    [ Predicate $ isValueOnly True
     , regex "c"
     ]
   , prod = \tokens -> case tokens of
@@ -63,8 +63,8 @@ ruleTemp2 :: Rule
 ruleTemp2 = Rule
   { name = "화씨 <temp>"
   , pattern =
-    [ regex "\xd654\xc528"
-    , dimension Temperature
+    [ regex "화씨"
+    , Predicate $ isValueOnly True
     ]
   , prod = \tokens -> case tokens of
       (_:Token Temperature td:_) -> Just . Token Temperature $
@@ -76,7 +76,7 @@ ruleTempF :: Rule
 ruleTempF = Rule
   { name = "<temp> °F"
   , pattern =
-    [ dimension Temperature
+    [ Predicate $ isValueOnly True
     , regex "f"
     ]
   , prod = \tokens -> case tokens of

@@ -26,10 +26,10 @@ ruleOrdinals = Rule
   { name = "ordinals (첫번째)"
   , pattern =
     [ dimension Numeral
-    , regex "\xbc88\xc9f8|\xc9f8(\xbc88)?"
+    , regex "번째|째(번)?"
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):_) ->
+      (Token Numeral NumeralData{TNumeral.value = v}:_) ->
         Just . ordinal $ floor v
       _ -> Nothing
   }

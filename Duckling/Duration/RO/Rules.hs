@@ -7,24 +7,28 @@
 
 
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Duration.RO.Rules
-  ( rules ) where
+  ( rules
+  ) where
 
-import Prelude
 import Data.String
+import Prelude
 
 import Duckling.Dimensions.Types
 import Duckling.Duration.Helpers
-import qualified Duckling.TimeGrain.Types as TG
+import Duckling.Numeral.Helpers (numberWith)
 import Duckling.Types
+import qualified Duckling.Numeral.Types as TNumeral
+import qualified Duckling.TimeGrain.Types as TG
 
 ruleQuarterOfAnHour :: Rule
 ruleQuarterOfAnHour = Rule
   { name = "quarter of an hour"
   , pattern =
-    [ regex "(1/4\\s?(h|or(a|\x0103))|sfert de or(a|\x0103))"
+    [ regex "(1/4\\s?(h|or(a|ă))|sfert de or(a|ă))"
     ]
   , prod = \_ -> Just . Token Duration $ duration TG.Minute 15
   }
@@ -33,7 +37,7 @@ ruleJumatateDeOra :: Rule
 ruleJumatateDeOra = Rule
   { name = "jumatate de ora"
   , pattern =
-    [ regex "(1/2\\s?(h|or(a|\x0103))|jum(a|\x0103)tate (de )?or(a|\x0103))"
+    [ regex "(1/2\\s?(h|or(a|ă))|jum(a|ă)tate (de )?or(a|ă))"
     ]
   , prod = \_ -> Just . Token Duration $ duration TG.Minute 30
   }
@@ -42,7 +46,7 @@ ruleTreiSferturiDeOra :: Rule
 ruleTreiSferturiDeOra = Rule
   { name = "trei sferturi de ora"
   , pattern =
-    [ regex "(3/4\\s?(h|or(a|\x0103))|trei sferturi de or(a|\x0103))"
+    [ regex "(3/4\\s?(h|or(a|ă))|trei sferturi de or(a|ă))"
     ]
   , prod = \_ -> Just . Token Duration $ duration TG.Minute 45
   }
@@ -54,7 +58,7 @@ ruleOUnitofduration = Rule
     [ regex "o|un"
     , dimension TimeGrain
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (_:Token TimeGrain grain:_) -> Just . Token Duration $ duration grain 1
       _ -> Nothing
   }
@@ -63,11 +67,27 @@ ruleExactInJurDeDuration :: Rule
 ruleExactInJurDeDuration = Rule
   { name = "exact|in jur de <duration>"
   , pattern =
-    [ regex "(exact|aproximativ|(i|\x00ee)n jur de)"
+    [ regex "(exact|aproximativ|(i|î)n jur de)"
     , dimension Duration
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (_:token:_) -> Just token
+      _ -> Nothing
+  }
+
+ruleIntegerDeUnitofduration :: Rule
+ruleIntegerDeUnitofduration = Rule
+  { name = "<integer> <unit-of-duration>"
+  , pattern =
+    [ numberWith TNumeral.value (>= 20)
+    , regex "de"
+    , dimension TimeGrain
+    ]
+  , prod = \case
+      (Token Numeral TNumeral.NumeralData{TNumeral.value = v}:
+       _:
+       Token TimeGrain grain:
+       _) -> Just . Token Duration . duration grain $ floor v
       _ -> Nothing
   }
 
@@ -78,4 +98,5 @@ rules =
   , ruleOUnitofduration
   , ruleQuarterOfAnHour
   , ruleTreiSferturiDeOra
+  , ruleIntegerDeUnitofduration
   ]

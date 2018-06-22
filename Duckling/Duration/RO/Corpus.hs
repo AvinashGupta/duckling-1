@@ -16,13 +16,13 @@ import Prelude
 import Data.String
 
 import Duckling.Duration.Types
-import Duckling.Lang
+import Duckling.Locale
 import Duckling.Resolve
 import Duckling.Testing.Types
 import Duckling.TimeGrain.Types (Grain(..))
 
 corpus :: Corpus
-corpus = (testContext {lang = RO}, allExamples)
+corpus = (testContext {locale = makeLocale RO Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
@@ -38,6 +38,7 @@ allExamples = concat
   , examples (DurationData 45 Minute)
              [ "trei sferturi de oră"
              , "45min"
+             , "45 de minute"
              ]
   , examples (DurationData 12 Week)
              [ "doișpe saptamanile"

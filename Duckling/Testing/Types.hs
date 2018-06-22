@@ -20,11 +20,14 @@ module Duckling.Testing.Types
   , examplesCustom
   , parserCheck
   , refTime
+  , simpleCheck
   , testContext
+  , testOptions
+  , withLocale
   , zTime
   ) where
 
-import Data.Aeson
+import Data.Aeson (toJSON, ToJSON, Value)
 import Data.Fixed (Pico)
 import Data.Text (Text)
 import Prelude
@@ -36,18 +39,18 @@ import Duckling.Types
 
 type TestPredicate = Context -> ResolvedToken -> Bool
 type Example = (Text, TestPredicate)
-type Corpus = (Context, [Example])
-type NegativeCorpus = (Context, [Text])
+type Corpus = (Context, Options, [Example])
+type NegativeCorpus = (Context, Options, [Text])
 
 examplesCustom :: TestPredicate -> [Text] -> [Example]
 examplesCustom check = map (, check)
 
 simpleCheck :: ToJSON a => a -> TestPredicate
-simpleCheck json _ (Resolved {jsonValue = v}) = toJSON json == v
+simpleCheck json _ Resolved{rval = RVal _ v} = toJSON json == toJSON v
 
 parserCheck :: Eq a => a -> (Value -> Maybe a) -> TestPredicate
-parserCheck expected parse _ (Resolved {jsonValue = v}) =
-  maybe False (expected ==) $ parse v
+parserCheck expected parse _ Resolved{rval = RVal _ v} =
+  maybe False (expected ==) $ parse (toJSON v)
 
 examples :: ToJSON a => a -> [Text] -> [Example]
 examples output = examplesCustom (simpleCheck output)
@@ -69,4 +72,16 @@ refTime datetime offset = fromZonedTime $ zTime datetime offset
 -- Tuesday Feb 12, 2013 at 4:30am is the "now" for the tests
 testContext :: Context
 testContext = Context
-  {lang = EN, referenceTime = refTime (2013, 2, 12, 4, 30, 0) (-2)}
+  { locale = makeLocale EN Nothing
+  , referenceTime = refTime (2013, 2, 12, 4, 30, 0) (-2)
+  }
+
+testOptions :: Options
+testOptions = Options
+  { withLatent = False
+  }
+
+withLocale :: (Context, Options, [a]) -> Locale -> [a]
+  -> (Context, Options, [a])
+withLocale (langContext, options, langXs) locale localeXs
+  = (langContext {locale = locale}, options, langXs ++ localeXs)

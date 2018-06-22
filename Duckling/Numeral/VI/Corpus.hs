@@ -14,13 +14,13 @@ module Duckling.Numeral.VI.Corpus
 import Prelude
 import Data.String
 
-import Duckling.Lang
+import Duckling.Locale
 import Duckling.Numeral.Types
 import Duckling.Resolve
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext {lang = VI}, allExamples)
+corpus = (testContext {locale = makeLocale VI Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
@@ -61,16 +61,16 @@ allExamples = concat
             , "tră"
             ]
   , examples (NumeralValue 1.1)
-             [ "1.1"
-             , "1.10"
-             , "01.10"
+             [ "1,1"
+             , "1,10"
+             , "01,10"
              ]
   , examples (NumeralValue 0.77)
-             [ "0.77"
-             , ".77"
+             [ "0,77"
+             , ",77"
              ]
   , examples (NumeralValue 100000)
-             [ "100,000"
+             [ "100.000"
              , "100000"
              , "100K"
              , "100k"
@@ -79,22 +79,22 @@ allExamples = concat
              [ "3M"
              , "3000K"
              , "3000000"
-             , "3,000,000"
+             , "3.000.000"
              ]
   , examples (NumeralValue 1200000)
-             [ "1,200,000"
+             [ "1.200.000"
              , "1200000"
-             , "1.2M"
+             , "1,2M"
              , "1200K"
-             , ".0012G"
+             , ",0012G"
              ]
   , examples (NumeralValue (-1200000))
-             [ "- 1,200,000"
+             [ "- 1.200.000"
              , "-1200000"
-             , "âm 1,200,000"
-             , "-1.2M"
+             , "âm 1.200.000"
+             , "-1,2M"
              , "-1200K"
-             , "-.0012G"
+             , "-,0012G"
              ]
   , examples (NumeralValue 5000)
              [ "5 nghìn"

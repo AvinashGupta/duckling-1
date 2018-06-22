@@ -38,7 +38,7 @@ data Grain
 
 instance Resolve Grain where
   type ResolvedValue Grain = Grain
-  resolve _ _ = Nothing
+  resolve _ _ _ = Nothing
 
 instance TextShow Grain where
   showb = fromText . Text.toLower . Text.pack . show
@@ -61,7 +61,7 @@ add utcTime Quarter n =
   updateUTCDay utcTime . Time.addGregorianMonthsClip $ 3 * n
 add utcTime Year n = updateUTCDay utcTime $ Time.addGregorianYearsClip n
 
-inSeconds :: Grain -> Int -> Int
+inSeconds :: Num a => Grain -> a -> a
 inSeconds NoGrain n = n
 inSeconds Second  n = n
 inSeconds Minute  n = n * 60

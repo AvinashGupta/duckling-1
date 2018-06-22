@@ -7,52 +7,55 @@
 
 
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Numeral.ZH.Rules
-  ( rules ) where
+  ( rules
+  ) where
 
-import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
-import qualified Data.Text as Text
-import Prelude
 import Data.String
+import Data.Text (Text)
+import Prelude
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Text as Text
 
 import Duckling.Dimensions.Types
 import Duckling.Numeral.Helpers
 import Duckling.Numeral.Types (NumeralData (..))
-import qualified Duckling.Numeral.Types as TNumeral
 import Duckling.Regex.Types
 import Duckling.Types
+import qualified Duckling.Numeral.Types as TNumeral
 
-ruleInteger5 :: Rule
-ruleInteger5 = Rule
+ruleInteger :: Rule
+ruleInteger = Rule
   { name = "integer (0..10)"
   , pattern =
-    [ regex "(\x3007|\x96f6|\x4e00|\x4e8c|\x4e24|\x5169|\x4e09|\x56db|\x4e94|\x516d|\x4e03|\x516b|\x4e5d|\x5341)(\x4e2a|\x500b)?"
+    [ regex "(〇|零|一|二|两|兩|三|四|五|六|七|八|九|十)"
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (Token RegexMatch (GroupMatch (match:_)):_) ->
         HashMap.lookup match integerMap >>= integer
       _ -> Nothing
   }
 
-integerMap :: HashMap.HashMap Text.Text Integer
+integerMap :: HashMap.HashMap Text Integer
 integerMap = HashMap.fromList
-  [ ( "\x3007", 0 )
-  , ( "\x96f6", 0 )
-  , ( "\x4e00", 1 )
-  , ( "\x5169", 2 )
-  , ( "\x4e24", 2 )
-  , ( "\x4e8c", 2 )
-  , ( "\x4e09", 3 )
-  , ( "\x56db", 4 )
-  , ( "\x4e94", 5 )
-  , ( "\x516d", 6 )
-  , ( "\x4e03", 7 )
-  , ( "\x516b", 8 )
-  , ( "\x4e5d", 9 )
-  , ( "\x5341", 10 )
+  [ ( "〇", 0 )
+  , ( "零", 0 )
+  , ( "一", 1 )
+  , ( "兩", 2 )
+  , ( "两", 2 )
+  , ( "二", 2 )
+  , ( "三", 3 )
+  , ( "四", 4 )
+  , ( "五", 5 )
+  , ( "六", 6 )
+  , ( "七", 7 )
+  , ( "八", 8 )
+  , ( "九", 9 )
+  , ( "十", 10 )
   ]
 
 
@@ -60,24 +63,11 @@ ruleNumeralsPrefixWithNegativeOrMinus :: Rule
 ruleNumeralsPrefixWithNegativeOrMinus = Rule
   { name = "numbers prefix with -, negative or minus"
   , pattern =
-    [ regex "-|\x8d1f\\s?|\x8ca0\\s?"
-    , dimension Numeral
+    [ regex "-|负|負"
+    , Predicate isPositive
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (_:Token Numeral nd:_) -> double (TNumeral.value nd * (-1))
-      _ -> Nothing
-  }
-
-ruleIntegerNumeric :: Rule
-ruleIntegerNumeric = Rule
-  { name = "integer (numeric)"
-  , pattern =
-    [ regex "(\\d{1,18})"
-    ]
-  , prod = \tokens -> case tokens of
-      (Token RegexMatch (GroupMatch (match:_)):_) -> do
-        v <- parseInt match
-        integer $ toInteger v
       _ -> Nothing
   }
 
@@ -87,9 +77,9 @@ ruleDecimalWithThousandsSeparator = Rule
   , pattern =
     [ regex "(\\d+(,\\d\\d\\d)+\\.\\d+)"
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (Token RegexMatch (GroupMatch (match:_)):_) ->
-        parseDouble (Text.replace (Text.singleton ',') Text.empty match) >>= double
+        parseDouble (Text.replace "," Text.empty match) >>= double
       _ -> Nothing
   }
 
@@ -99,76 +89,57 @@ ruleDecimalNumeral = Rule
   , pattern =
     [ regex "(\\d*\\.\\d+)"
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (Token RegexMatch (GroupMatch (match:_)):_) -> parseDecimal True match
       _ -> Nothing
   }
 
 ruleNumeral :: Rule
 ruleNumeral = Rule
-  { name = "<number>个"
+  { name = "<number>个/個"
   , pattern =
     [ dimension Numeral
-    , regex "\x4e2a"
+    , regex "个|個"
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (token:_) -> Just token
       _ -> Nothing
   }
 
-ruleInteger3 :: Rule
-ruleInteger3 = Rule
-  { name = "integer (20..90)"
-  , pattern =
-    [ numberBetween 2 10
-    , regex "\x5341"
-    ]
-  , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):_) -> double $ v * 10
-      _ -> Nothing
-  }
+numeralSuffixList :: [(Text, Maybe Token)]
+numeralSuffixList =
+  [ ("K", double 1e3 >>= withGrain 3 >>= withMultipliable)
+  , ("M", double 1e6 >>= withGrain 6 >>= withMultipliable)
+  , ("G", double 1e9 >>= withGrain 9 >>= withMultipliable)
+  , ("十", double 1e1 >>= withGrain 1 >>= withMultipliable)
+  , ("百", double 1e2 >>= withGrain 2 >>= withMultipliable)
+  , ("千", double 1e3 >>= withGrain 3 >>= withMultipliable)
+  , ("万", double 1e4 >>= withGrain 4 >>= withMultipliable)
+  , ("亿", double 1e8 >>= withGrain 8 >>= withMultipliable)
+  ]
 
-ruleNumeralsSuffixesKMG :: Rule
-ruleNumeralsSuffixesKMG = Rule
-  { name = "numbers suffixes (K, M, G)"
+ruleNumeralSuffixes :: [Rule]
+ruleNumeralSuffixes = uncurry constructNumeralSuffixRule <$> numeralSuffixList
+  where
+    constructNumeralSuffixRule :: Text -> Maybe Token -> Rule
+    constructNumeralSuffixRule suffixName production = Rule
+      { name = "number suffix: " `mappend` suffixName
+      , pattern =
+        [ regex $ Text.unpack suffixName
+        ]
+      , prod = const production
+      }
+
+
+ruleMultiply :: Rule
+ruleMultiply = Rule
+  { name = "compose by multiplication"
   , pattern =
     [ dimension Numeral
-    , regex "([kmg])"
+    , Predicate isMultipliable
     ]
-  , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):
-       Token RegexMatch (GroupMatch (match:_)):
-       _) -> case Text.toLower match of
-         "k" -> double $ v * 1e3
-         "m" -> double $ v * 1e6
-         "g" -> double $ v * 1e9
-         _   -> Nothing
-      _ -> Nothing
-  }
-
-ruleInteger4 :: Rule
-ruleInteger4 = Rule
-  { name = "integer 21..99"
-  , pattern =
-    [ oneOf [70, 20, 60, 50, 40, 90, 30, 80]
-    , numberBetween 1 10
-    ]
-  , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v1}):
-       Token Numeral (NumeralData {TNumeral.value = v2}):
-       _) -> double $ v1 + v2
-      _ -> Nothing
-  }
-
-ruleInteger2 :: Rule
-ruleInteger2 = Rule
-  { name = "integer (11..19)"
-  , pattern =
-    [ regex "\x5341"
-    , numberBetween 1 10
-    ]
-  , prod = \tokens -> case tokens of
-      (_:Token Numeral (NumeralData {TNumeral.value = v}):_) -> double $ 10 + v
+  , prod = \case
+      (token1:token2:_) -> multiply token1 token2
       _ -> Nothing
   }
 
@@ -178,24 +149,64 @@ ruleIntegerWithThousandsSeparator = Rule
   , pattern =
     [ regex "(\\d{1,3}(,\\d\\d\\d){1,5})"
     ]
-  , prod = \tokens -> case tokens of
+  , prod = \case
       (Token RegexMatch (GroupMatch (match:_)):
-       _) -> let fmt = Text.replace (Text.singleton ',') Text.empty match
+       _) -> let fmt = Text.replace "," Text.empty match
         in parseDouble fmt >>= double
       _ -> Nothing
   }
+
+ruleNumeralsIntersectNonconsectiveUnit :: Rule
+ruleNumeralsIntersectNonconsectiveUnit = Rule
+  { name = "integer with nonconsecutive unit modifiers"
+  , pattern =
+    [ Predicate isPositive
+    , regex "零|〇"
+    , Predicate isPositive
+    ]
+  , prod = \case
+      (Token Numeral NumeralData{TNumeral.value = v1}:_:
+       Token Numeral NumeralData{TNumeral.value = v2}:_) ->
+        sumConnectedNumbers v1 v2 (diffIntegerDigits v1 v2)
+        >>= double
+      _ -> Nothing
+  }
+  where
+    sumConnectedNumbers :: Double -> Double -> Int -> Maybe Double
+    sumConnectedNumbers v1 v2 d
+      | d <= 1 = Nothing
+      | otherwise = Just $ v1 + v2
+
+ruleNumeralsIntersectConsecutiveUnit :: Rule
+ruleNumeralsIntersectConsecutiveUnit = Rule
+  { name = "integer with consecutive unit modifiers"
+  , pattern =
+    [ Predicate isPositive
+    , Predicate isPositive
+    ]
+  , prod = \case
+      (Token Numeral NumeralData{TNumeral.value = v1}:
+       Token Numeral NumeralData{TNumeral.value = v2}:_) ->
+        sumConnectedNumbers v1 v2 (diffIntegerDigits v1 v2)
+        >>= double
+      _ -> Nothing
+  }
+  where
+    sumConnectedNumbers :: Double -> Double -> Int -> Maybe Double
+    sumConnectedNumbers v1 v2 d
+      | d == 1 = Just $ v1 + v2
+      | otherwise = Nothing
 
 rules :: [Rule]
 rules =
   [ ruleDecimalNumeral
   , ruleDecimalWithThousandsSeparator
-  , ruleInteger2
-  , ruleInteger3
-  , ruleInteger4
-  , ruleInteger5
-  , ruleIntegerNumeric
+  , ruleInteger
   , ruleIntegerWithThousandsSeparator
   , ruleNumeral
+  , ruleNumeralsIntersectConsecutiveUnit
+  , ruleNumeralsIntersectNonconsectiveUnit
   , ruleNumeralsPrefixWithNegativeOrMinus
-  , ruleNumeralsSuffixesKMG
+  , ruleMultiply
   ]
+  ++ ruleNumeralSuffixes

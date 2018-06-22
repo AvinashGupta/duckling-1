@@ -9,28 +9,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Quantity.RO.Corpus
-  ( corpus ) where
+  ( corpus
+  ) where
 
-import Prelude
 import Data.String
+import Prelude
 
-import Duckling.Lang
+import Duckling.Locale
 import Duckling.Quantity.Types
 import Duckling.Resolve
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext {lang = RO}, allExamples)
+corpus = (testContext {locale = makeLocale RO Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
-  [ examples (QuantityData Pound 2 (Just "carne"))
+  [ examples (simple Pound 2 (Just "carne"))
              [ "doua livre de carne"
              ]
-  , examples (QuantityData Pound 1 Nothing)
+  , examples (simple Pound 1 Nothing)
              [ "o livră"
              ]
-  , examples (QuantityData Pound 500 (Just "zahăr"))
+  , examples (simple Pound 500 (Just "zahăr"))
              [ "cinci sute livre de zahăr"
+             , "cinci sute de livre de zahăr"
+             ]
+  , examples (simple Pound 21 (Just "mamaliga"))
+             [ "douăzeci și unu de livre de mamaliga"
              ]
   ]

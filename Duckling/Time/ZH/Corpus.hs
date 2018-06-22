@@ -9,19 +9,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Time.ZH.Corpus
-  ( corpus ) where
+  ( corpus
+  , defaultCorpus
+  ) where
 
-import Prelude
 import Data.String
+import Prelude
 
-import Duckling.Lang
+import Duckling.Locale
 import Duckling.Resolve
 import Duckling.Time.Corpus
 import Duckling.TimeGrain.Types hiding (add)
 import Duckling.Testing.Types hiding (examples)
 
+defaultCorpus :: Corpus
+defaultCorpus = corpus
+
 corpus :: Corpus
-corpus = (testContext {lang = ZH}, allExamples)
+corpus = (testContext {locale = makeLocale ZH Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
@@ -239,6 +244,9 @@ allExamples = concat
              , "今個星期二"
              , "今個礼拜二"
              , "今個禮拜二"
+             , "今星期二"
+             , "今礼拜二"
+             , "今禮拜二"
              ]
   , examples (datetime (2013, 2, 11, 0, 0, 0) Week)
              [ "这周"
@@ -393,7 +401,6 @@ allExamples = concat
   , examples (datetimeInterval ((2012, 12, 0, 0, 0, 0), (2013, 2, 0, 0, 0, 0)) Month)
              [ "上两个月"
              , "上二个月"
-             , "上二月"
              , "前两个月"
              , "前二个月"
              , "前两月"
@@ -454,49 +461,65 @@ allExamples = concat
              , "今晚8點"
              , "今晚八點"
              ]
-  , examples (datetime (2014, 1, 1, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2014, 1, 1, 0, 0, 0) Day "元旦")
              [ "元旦"
              , "元旦节"
              , "元旦節"
+             , "阳历新年"
              ]
-  , examples (datetime (2013, 2, 14, 0, 0, 0) Day)
-             [ "情人节"
-             , "情人節"
-             ]
-  , examples (datetime (2013, 3, 8, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 3, 8, 0, 0, 0) Day "妇女节")
              [ "妇女节"
              , "婦女節"
              ]
-  , examples (datetime (2013, 5, 1, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 5, 1, 0, 0, 0) Day "劳动节")
              [ "劳动节"
              , "勞動節"
+             , "五一国际劳动节"
              ]
-  , examples (datetime (2013, 6, 1, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 6, 1, 0, 0, 0) Day "儿童节")
              [ "儿童节"
              , "兒童節"
+             , "国际儿童节"
              ]
-  , examples (datetime (2013, 8, 1, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 8, 1, 0, 0, 0) Day "建军节")
              [ "建军节"
+             , "八一建軍節"
              , "建軍節"
              ]
-  , examples (datetime (2013, 10, 1, 0, 0, 0) Day)
-             [ "国庆"
-             , "國慶"
-             , "国庆节"
-             , "國慶節"
-             ]
-  , examples (datetime (2013, 12, 25, 0, 0, 0) Day)
+  , examples (datetimeHoliday (2013, 12, 25, 0, 0, 0) Day "圣诞节")
              [ "圣诞"
              , "聖誕"
              , "圣诞节"
              , "聖誕節"
              ]
-  , examples (datetimeInterval ((2013, 10, 1, 18, 0, 0), (2013, 10, 2, 0, 0, 0)) Hour)
-             [ "国庆节晚上"
-             , "國慶節晚上"
+  , examples (datetimeHoliday (2013, 4, 1, 0, 0, 0) Day "愚人节")
+             [ "愚人节"
+             , "愚人節"
              ]
-  , examples (datetime (2013, 6, 1, 15, 15, 0) Minute)
+  , examples (datetimeHoliday (2013, 10, 31, 0, 0, 0) Day "万圣节")
+             [ "万圣节"
+             , "萬聖節"
+             ]
+  , examples (datetimeHoliday (2013, 12, 20, 0, 0, 0) Day "澳门回归纪念日")
+             [ "澳门回归纪念日"
+             , "澳門回歸紀念日"
+             ]
+  , examples (datetimeHoliday (2013, 2, 14, 0, 0, 0) Day "情人节")
+             [ "情人节"
+             , "情人節"
+             , "圣瓦伦丁节"
+             ]
+  , examples (datetimeHoliday (2013, 3, 15, 0, 0, 0) Day "国际消费者权益日")
+             [ "国际消费者权益日"
+             , "国际消費者權益日"
+             , "三一五"
+             ]
+  , examples (datetimeHoliday (2013, 6, 1, 15, 15, 0) Minute "儿童节")
              [ "儿童节下午三点十五"
              , "兒童節下午三點十五"
+             ]
+  , examples (datetimeIntervalHoliday ((2013, 2, 14, 18, 0, 0), (2013, 2, 15, 0, 0, 0)) Hour "情人节")
+             [ "情人节晚上"
+             , "情人節晚上"
              ]
   ]

@@ -30,7 +30,7 @@ ruleHalfAnHour :: Rule
 ruleHalfAnHour = Rule
   { name = "half an hour"
   , pattern =
-    [ regex "p(o|\x00f3)(l|\x0142) godziny"
+    [ regex "p(o|ó)(l|ł) godziny"
     ]
   , prod = \_ -> Just . Token Duration $ duration TG.Minute 30
   }
@@ -44,7 +44,7 @@ ruleIntegerMoreUnitofduration = Rule
     , dimension TimeGrain
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):
+      (Token Numeral NumeralData{TNumeral.value = v}:
        _:
        Token TimeGrain grain:
        _) -> Just . Token Duration . duration grain $ floor v
@@ -72,10 +72,10 @@ ruleIntegerAndAnHalfHours = Rule
   { name = "<integer> and an half hours"
   , pattern =
     [ Predicate isNatural
-    , regex "i (p(o|\x00f3)(l|\x0142)) godziny"
+    , regex "i (p(o|ó)(l|ł)) godziny"
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):_) ->
+      (Token Numeral NumeralData{TNumeral.value = v}:_) ->
         Just . Token Duration . duration TG.Minute $ 30 + 60 * floor v
       _ -> Nothing
   }
@@ -96,7 +96,7 @@ ruleAboutDuration :: Rule
 ruleAboutDuration = Rule
   { name = "about <duration>"
   , pattern =
-    [ regex "(oko(l|\x0142)o|miej wi(\x0119|e)cej|jakie(s|\x015b))"
+    [ regex "(oko(l|ł)o|miej wi(ę|e)cej|jakie(s|ś))"
     , dimension Duration
     ]
   , prod = \tokens -> case tokens of
@@ -108,7 +108,7 @@ ruleExactlyDuration :: Rule
 ruleExactlyDuration = Rule
   { name = "exactly <duration>"
   , pattern =
-    [ regex "r(o|\x00f3)wno|dok(l|\x0142)adnie"
+    [ regex "r(o|ó)wno|dok(l|ł)adnie"
     , dimension Duration
     ]
   , prod = \tokens -> case tokens of

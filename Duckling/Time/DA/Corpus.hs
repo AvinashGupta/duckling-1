@@ -9,12 +9,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Time.DA.Corpus
-  ( corpus ) where
+  ( corpus
+  ) where
 
-import Prelude
 import Data.String
+import Prelude
 
-import Duckling.Lang
+import Duckling.Locale
 import Duckling.Resolve
 import Duckling.Time.Corpus
 import Duckling.Time.Types hiding (Month)
@@ -22,7 +23,7 @@ import Duckling.TimeGrain.Types hiding (add)
 import Duckling.Testing.Types hiding (examples)
 
 corpus :: Corpus
-corpus = (testContext {lang = DA}, allExamples)
+corpus = (testContext {locale = makeLocale DA Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
@@ -41,12 +42,11 @@ allExamples = concat
              ]
   , examples (datetime (2013, 2, 18, 0, 0, 0) Day)
              [ "mandag"
-             , "man."
              , "på mandag"
              ]
   , examples (datetime (2013, 2, 18, 0, 0, 0) Day)
              [ "Mandag den 18. februar"
-             , "Man, 18 februar"
+             , "Mandag, 18 februar"
              ]
   , examples (datetime (2013, 2, 19, 0, 0, 0) Day)
              [ "tirsdag"
@@ -143,7 +143,6 @@ allExamples = concat
              ]
   , examples (datetime (2013, 2, 18, 0, 0, 0) Day)
              [ "Mandag, Feb 18"
-             , "Man, februar 18"
              ]
   , examples (datetime (2013, 2, 11, 0, 0, 0) Week)
              [ "denne uge"
@@ -562,8 +561,11 @@ allExamples = concat
              ]
   , examples (datetime (2013, 2, 14, 6, 0, 0) Minute)
              [ "torsdag kl. 8:00 GMT"
+             , "torsdag kl. 8:00 gmt"
              , "torsdag klokken 8:00 GMT"
+             , "torsdag klokken 8:00 gmt"
              , "torsdag 08:00 GMT"
+             , "torsdag 08:00 gmt"
              ]
   , examples (datetime (2013, 2, 12, 14, 0, 0) Hour)
              [ "idag kl. 14"

@@ -11,13 +11,19 @@
 
 module Duckling.Numeral.Helpers
   ( decimalsToDouble
+  , diffIntegerDigits
   , double
   , integer
   , multiply
+  , isMultipliable
+  , isNatural
+  , isPositive
+  , hasGrain
   , divide
   , notOkForAnyTime
   , numberBetween
   , numberWith
+  , numeralMapEL
   , oneOf
   , parseDouble
   , parseInt
@@ -27,10 +33,13 @@ module Duckling.Numeral.Helpers
   , parseDecimal
   ) where
 
+import Data.HashMap.Strict (HashMap)
 import Data.Maybe
+import Data.String
 import Data.Text (Text)
 import Prelude
 import qualified Data.Attoparsec.Text as Atto
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as Text
 
 import Duckling.Dimensions.Types
@@ -72,6 +81,18 @@ decimalsToDouble x =
       [] -> 0
       (multiplier : _) -> x / multiplier
 
+-- diffIntegerDigits a b = # of digits in a - # of digits in b
+-- ignores the nondecimal components
+diffIntegerDigits :: Double -> Double -> Int
+diffIntegerDigits a b = digitsOf a - digitsOf b
+  where
+    digitsOf :: Double -> Int
+    digitsOf = digitsOfInt . floor . abs
+
+    digitsOfInt :: Int -> Int
+    digitsOfInt 0 = 0
+    digitsOfInt a = 1 + digitsOfInt (a `div` 10)
+
 -- -----------------------------------------------------------------
 -- Patterns
 
@@ -87,6 +108,23 @@ numberBetween low up = Predicate $ \x ->
     (Token Numeral NumeralData {value = v, multipliable = False}) ->
       low <= v && v < up
     _ -> False
+
+isNatural :: Predicate
+isNatural (Token Numeral NumeralData {value = v}) =
+  isInteger v && v > 0
+isNatural _ = False
+
+isPositive :: Predicate
+isPositive (Token Numeral NumeralData{value = v}) = v >= 0
+isPositive _ = False
+
+isMultipliable :: Predicate
+isMultipliable (Token Numeral nd) = multipliable nd
+isMultipliable _ = False
+
+hasGrain :: Predicate
+hasGrain (Token Numeral NumeralData {grain = Just g}) = g > 1
+hasGrain _ = False
 
 oneOf :: [Double] -> PatternItem
 oneOf vs = Predicate $ \x ->
@@ -125,8 +163,8 @@ integer = double . fromIntegral
 
 multiply :: Token -> Token -> Maybe Token
 multiply
-  (Token Numeral (NumeralData {value = v1}))
-  (Token Numeral (NumeralData {value = v2, grain = g})) = case g of
+  (Token Numeral NumeralData{value = v1})
+  (Token Numeral NumeralData{value = v2, grain = g}) = case g of
   Nothing -> double $ v1 * v2
   Just grain | v2 > v1 -> double (v1 * v2) >>= withGrain grain
              | otherwise -> Nothing
@@ -134,8 +172,8 @@ multiply _ _ = Nothing
 
 divide :: Token -> Token -> Maybe Token
 divide
-  (Token Numeral (NumeralData {value = v1}))
-  (Token Numeral (NumeralData {value = v2})) = case v1 / v2 of
+  (Token Numeral NumeralData{value = v1})
+  (Token Numeral NumeralData{value = v2}) = case v1 / v2 of
     x | isInfinite x || isNaN x -> Nothing
     x -> double x
 divide _ _ = Nothing
@@ -146,3 +184,55 @@ parseDecimal isDot match
   | otherwise =
     parseDouble (Text.replace comma dot match)
     >>= double
+
+-- TODO: Single-word composition (#110)
+numeralMapEL :: HashMap Text Int
+numeralMapEL = HashMap.fromList
+  [ ( "δι"          , 2  )
+  , ( "δί"          , 2  )
+  , ( "τρι"         , 3  )
+  , ( "τρί"         , 3  )
+  , ( "τετρ"        , 4  )
+  , ( "πεντ"        , 5  )
+  , ( "πενθ"        , 5  )
+  , ( "εξ"          , 6  )
+  , ( "επτ"         , 7  )
+  , ( "εφτ"         , 7  )
+  , ( "οκτ"         , 8  )
+  , ( "οχτ"         , 8  )
+  , ( "εννι"        , 9  )
+  , ( "δεκ"         , 10 )
+  , ( "δεκαπεντ"    , 15 )
+  , ( "δεκαπενθ"    , 15 )
+  , ( "εικοσ"       , 20 )
+  , ( "εικοσιπεντ"  , 25 )
+  , ( "εικοσιπενθ"  , 25 )
+  , ( "τριαντ"      , 30 )
+  , ( "τριανταπεντ" , 35 )
+  , ( "τριανταπενθ" , 35 )
+  , ( "σαραντ"      , 40 )
+  , ( "σαρανταπεντ" , 45 )
+  , ( "σαρανταπενθ" , 45 )
+  , ( "πενηντ"      , 50 )
+  , ( "πενηνταπετν" , 55 )
+  , ( "πενηνταπετθ" , 55 )
+  , ( "εξηντ"       , 60 )
+  , ( "ενενηντ"     , 90 )
+  -- The following are used as prefixes
+  , ( "μιά"         , 1  )
+  , ( "ενά"         , 1  )
+  , ( "δυό"         , 2  )
+  , ( "τρεισή"      , 3  )
+  , ( "τεσσερισή"   , 4  )
+  , ( "τεσσερσή"    , 4  )
+  , ( "πεντέ"       , 5  )
+  , ( "εξί"         , 6  )
+  , ( "επτά"        , 7  )
+  , ( "εφτά"        , 7  )
+  , ( "οκτώ"        , 8  )
+  , ( "οχτώ"        , 8  )
+  , ( "εννιά"       , 9  )
+  , ( "δεκά"        , 10 )
+  , ( "εντεκά"      , 11 )
+  , ( "δωδεκά"      , 12 )
+  ]

@@ -9,25 +9,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Volume.RO.Corpus
-  ( corpus ) where
+  ( corpus
+  ) where
 
 import Data.String
 import Prelude
 
-import Duckling.Lang
+import Duckling.Locale
 import Duckling.Resolve
 import Duckling.Volume.Types
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext {lang = RO}, allExamples)
+corpus = (testContext {locale = makeLocale RO Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
   [ examples (VolumeValue Millilitre 250)
              [ "250 mililitri"
+             , "250 de mililitri"
              , "250ml"
              , "250 ml"
+             , "250 de ml"
              ]
   , examples (VolumeValue Litre 2)
              [ "2 litri"
@@ -44,5 +47,8 @@ allExamples = concat
   , examples (VolumeValue Litre 0.5)
              [ "jumatate de litru"
              , "jumătate de litru"
+             ]
+  , examples (VolumeValue Gallon 20)
+             [ "douazeci de galoane"
              ]
   ]

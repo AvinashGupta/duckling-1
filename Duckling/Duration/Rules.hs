@@ -7,20 +7,21 @@
 
 
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Duration.Rules
   ( rules
   ) where
 
-import Prelude
 import Data.String
+import Prelude
 
 import Duckling.Dimensions.Types
 import Duckling.Duration.Helpers
 import Duckling.Numeral.Types (NumeralData(..))
-import qualified Duckling.Numeral.Types as TNumeral
 import Duckling.Types
+import qualified Duckling.Numeral.Types as TNumeral
 
 ruleIntegerUnitofduration :: Rule
 ruleIntegerUnitofduration = Rule
@@ -29,8 +30,8 @@ ruleIntegerUnitofduration = Rule
     [ Predicate isNatural
     , dimension TimeGrain
     ]
-  , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):
+  , prod = \case
+      (Token Numeral NumeralData{TNumeral.value = v}:
        Token TimeGrain grain:
        _) -> Just . Token Duration . duration grain $ floor v
       _ -> Nothing

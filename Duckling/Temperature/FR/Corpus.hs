@@ -14,17 +14,17 @@ module Duckling.Temperature.FR.Corpus
 import Prelude
 import Data.String
 
-import Duckling.Lang
+import Duckling.Locale
 import Duckling.Resolve
 import Duckling.Temperature.Types
 import Duckling.Testing.Types
 
 corpus :: Corpus
-corpus = (testContext {lang = FR}, allExamples)
+corpus = (testContext {locale = makeLocale FR Nothing}, testOptions, allExamples)
 
 allExamples :: [Example]
 allExamples = concat
-  [ examples (TemperatureValue Celsius 37)
+  [ examples (simple Celsius 37)
              [ "37°C"
              , "37 ° celsius"
              , "37 degres Celsius"
@@ -33,18 +33,18 @@ allExamples = concat
              , "37 degré C"
              , "trente sept celsius"
              ]
-  , examples (TemperatureValue Fahrenheit 70)
+  , examples (simple Fahrenheit 70)
              [ "70°F"
              , "70 ° Fahrenheit"
              , "70 degrès F"
              , "soixante-dix Fahrenheit"
              ]
-  , examples (TemperatureValue Degree 45)
+  , examples (simple Degree 45)
              [ "45°"
              , "45 degrés"
              , "45 deg."
              ]
-  , examples (TemperatureValue Degree (-10))
+  , examples (simple Degree (-10))
              [ "-10°"
              , "- 10 degres"
              , "10 degres en dessous de zero"

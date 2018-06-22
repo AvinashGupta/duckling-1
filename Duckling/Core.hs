@@ -13,15 +13,24 @@
 module Duckling.Core
   ( Context(..)
   , Dimension(..)
-  , fromName
   , Entity(..)
   , Lang(..)
+  , Locale
+  , Node(..)
+  , Options(..)
+  , Range(..)
+  , Region(..)
+  , ResolvedVal(..)
   , Some(..)
+  , fromName
+  , makeLocale
+  , toJText
   , toName
 
   -- Duckling API
   , parse
   , supportedDimensions
+  , allLocales
 
   -- Reference time builders
   , currentReftime
@@ -30,7 +39,6 @@ module Duckling.Core
   ) where
 
 import Data.HashMap.Strict (HashMap)
-import Data.Maybe
 import Data.Text (Text)
 import Data.Time
 import Data.Time.LocalTime.TimeZone.Series
@@ -39,7 +47,7 @@ import qualified Data.HashMap.Strict as HashMap
 
 import Duckling.Api
 import Duckling.Dimensions.Types
-import Duckling.Lang
+import Duckling.Locale
 import Duckling.Resolve
 import Duckling.Types
 

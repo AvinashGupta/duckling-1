@@ -10,46 +10,34 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Duckling.Numeral.DA.Rules
-  ( rules ) where
+  ( rules
+  ) where
 
 import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
-import Data.Text (Text)
-import qualified Data.Text as Text
-import Prelude
 import Data.String
+import Data.Text (Text)
+import Prelude
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Text as Text
 
 import Duckling.Dimensions.Types
 import Duckling.Numeral.Helpers
 import Duckling.Numeral.Types (NumeralData (..))
-import qualified Duckling.Numeral.Types as TNumeral
 import Duckling.Regex.Types
 import Duckling.Types
+import qualified Duckling.Numeral.Types as TNumeral
 
 ruleNumeralsPrefixWithNegativeOrMinus :: Rule
 ruleNumeralsPrefixWithNegativeOrMinus = Rule
   { name = "numbers prefix with -, negative or minus"
   , pattern =
-    [ regex "-|minus\\s?|negativ\\s?"
-    , dimension Numeral
+    [ regex "-|minus|negativ"
+    , Predicate isPositive
     ]
   , prod = \tokens -> case tokens of
-      (_:Token Numeral (NumeralData {TNumeral.value = v}):_) ->
+      (_:Token Numeral NumeralData{TNumeral.value = v}:_) ->
         double $ v * (-1)
-      _ -> Nothing
-  }
-
-ruleIntegerNumeric :: Rule
-ruleIntegerNumeric = Rule
-  { name = "integer (numeric)"
-  , pattern =
-    [ regex "(\\d{1,18})"
-    ]
-  , prod = \tokens -> case tokens of
-      (Token RegexMatch (GroupMatch (match:_)):_) -> do
-        v <- parseInt match
-        integer $ toInteger v
       _ -> Nothing
   }
 
@@ -57,7 +45,7 @@ ruleFew :: Rule
 ruleFew = Rule
   { name = "few"
   , pattern =
-    [ regex "(nogle )?f\x00e5"
+    [ regex "(nogle )?få"
     ]
   , prod = \_ -> integer 3
   }
@@ -79,7 +67,7 @@ ruleDecimalWithThousandsSeparator = Rule
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) ->
-        parseDouble (Text.replace (Text.singleton '.') Text.empty match) >>= double
+        parseDouble (Text.replace "." Text.empty match) >>= double
       _ -> Nothing
   }
 
@@ -103,8 +91,8 @@ ruleInteger3 = Rule
     , numberBetween 1 10
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v1}):
-       Token Numeral (NumeralData {TNumeral.value = v2}):
+      (Token Numeral NumeralData{TNumeral.value = v1}:
+       Token Numeral NumeralData{TNumeral.value = v2}:
        _) -> double $ v1 + v2
       _ -> Nothing
   }
@@ -122,12 +110,12 @@ ruleIntersect :: Rule
 ruleIntersect = Rule
   { name = "intersect"
   , pattern =
-    [ numberWith (fromMaybe 0 . TNumeral.grain) (>1)
-    , dimension Numeral
+    [ Predicate hasGrain
+    , Predicate $ and . sequence [not . isMultipliable, isPositive]
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = val1, TNumeral.grain = Just g}):
-       Token Numeral (NumeralData {TNumeral.value = val2}):
+      (Token Numeral NumeralData{TNumeral.value = val1, TNumeral.grain = Just g}:
+       Token Numeral NumeralData{TNumeral.value = val2}:
        _) | (10 ** fromIntegral g) > val2 -> double $ val1 + val2
       _ -> Nothing
   }
@@ -137,10 +125,10 @@ ruleNumeralsSuffixesKMG = Rule
   { name = "numbers suffixes (K, M, G)"
   , pattern =
     [ dimension Numeral
-    , regex "([kmg])(?=[\\W\\$\x20ac]|$)"
+    , regex "([kmg])(?=[\\W\\$€]|$)"
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v}):
+      (Token Numeral NumeralData{TNumeral.value = v}:
        Token RegexMatch (GroupMatch (match:_)):
        _) -> case Text.toLower match of
           "k" -> double $ v * 1e3
@@ -186,9 +174,9 @@ ruleNumeralsOg = Rule
     , oneOf [70, 20, 60, 50, 40, 90, 30, 80]
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v1}):
+      (Token Numeral NumeralData{TNumeral.value = v1}:
        _:
-       Token Numeral (NumeralData {TNumeral.value = v2}):
+       Token Numeral NumeralData{TNumeral.value = v2}:
        _) -> double $ v1 + v2
       _ -> Nothing
   }
@@ -207,7 +195,7 @@ ruleMultiply = Rule
   { name = "compose by multiplication"
   , pattern =
     [ dimension Numeral
-    , numberWith TNumeral.multipliable id
+    , Predicate isMultipliable
     ]
   , prod = \tokens -> case tokens of
       (token1:token2:_) -> multiply token1 token2
@@ -221,8 +209,8 @@ zeroNineteenMap = HashMap.fromList
   , ("intet", 0)
   , ("en", 1)
   , ("et", 1)
-  , ("\x00e9n", 1)
-  , ("\x00e9t", 1)
+  , ("én", 1)
+  , ("ét", 1)
   , ("to", 2)
   , ("tre", 3)
   , ("fire", 4)
@@ -247,7 +235,7 @@ ruleInteger :: Rule
 ruleInteger = Rule
   { name = "integer (0..19)"
   , pattern =
-    [ regex "(intet|ingen|nul|en|et|\x00e9n|\x00e9t|to|tretten|tre|fire|femten|fem|seksten|seks|syv|otte|nitten|ni|ti|elleve|tolv|fjorten|sytten|atten)"
+    [ regex "(intet|ingen|nul|en|et|én|ét|to|tretten|tre|fire|femten|fem|seksten|seks|syv|otte|nitten|ni|ti|elleve|tolv|fjorten|sytten|atten)"
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) ->
@@ -281,12 +269,12 @@ ruleNumeralDotNumeral = Rule
   , pattern =
     [ dimension Numeral
     , regex "komma"
-    , numberWith TNumeral.grain isNothing
+    , Predicate $ not . hasGrain
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = v1}):
+      (Token Numeral NumeralData{TNumeral.value = v1}:
        _:
-       Token Numeral (NumeralData {TNumeral.value = v2}):
+       Token Numeral NumeralData{TNumeral.value = v2}:
        _) -> double $ v1 + decimalsToDouble v2
       _ -> Nothing
   }
@@ -299,7 +287,7 @@ ruleIntegerWithThousandsSeparator = Rule
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) ->
-        parseDouble (Text.replace (Text.singleton '.') Text.empty match) >>= double
+        parseDouble (Text.replace "." Text.empty match) >>= double
       _ -> Nothing
   }
 
@@ -313,7 +301,6 @@ rules =
   , ruleInteger
   , ruleInteger2
   , ruleInteger3
-  , ruleIntegerNumeric
   , ruleIntegerWithThousandsSeparator
   , ruleIntersect
   , ruleMultiply

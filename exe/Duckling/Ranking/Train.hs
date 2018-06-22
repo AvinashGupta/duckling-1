@@ -12,11 +12,10 @@ module Duckling.Ranking.Train
   ( makeClassifiers
   ) where
 
+import Data.HashSet (HashSet)
+import Prelude
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
-import Data.HashSet (HashSet)
-
-import Prelude
 import qualified Data.List as List
 
 import Duckling.Engine
@@ -64,16 +63,15 @@ makeClass feats total classTotal vocSize = ClassData
       log $ (fromIntegral x + 1.0) / fromIntegral denum
       ) feats
 
-
 -- | Augment the dataset with one example.
 -- | Add all the nodes contributing to the resolutions of the input sentence.
 -- | Classes:
 -- | 1) True (node contributed to a token passing test predicate)
 -- | 2) False (node didn't contribute to any passing tokens)
-makeDataset1 :: [Rule] -> Context -> Dataset -> Example -> Dataset
-makeDataset1 rules context dataset (sentence, predicate) = dataset'
+makeDataset1 :: [Rule] -> Context -> Options -> Dataset -> Example -> Dataset
+makeDataset1 rules context options dataset (sentence, predicate) = dataset'
   where
-    tokens = parseAndResolve rules sentence context
+    tokens = parseAndResolve rules sentence context options
     (ok, ko) = List.partition (predicate context) tokens
     subnodes :: Node -> HashSet Node
     subnodes node@(Node{..}) = case children of
@@ -94,5 +92,5 @@ makeDataset1 rules context dataset (sentence, predicate) = dataset'
 
 -- | Build a dataset (rule name -> datums)
 makeDataset :: [Rule] -> Corpus -> Dataset
-makeDataset rules (context, examples) =
-   List.foldl' (makeDataset1 rules context) HashMap.empty examples
+makeDataset rules (context, options, examples) =
+   List.foldl' (makeDataset1 rules context options) HashMap.empty examples

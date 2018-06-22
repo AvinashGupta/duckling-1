@@ -11,11 +11,11 @@
 {-# LANGUAGE NoRebindableSyntax #-}
 
 module Duckling.Numeral.BG.Rules
-  ( rules ) where
+  ( rules
+  ) where
 
 import Data.HashMap.Strict (HashMap)
 import Data.Maybe
-import Data.String
 import Data.Text (Text)
 import Prelude
 import qualified Data.HashMap.Strict as HashMap
@@ -27,19 +27,6 @@ import Duckling.Numeral.Types (NumeralData (..))
 import Duckling.Regex.Types
 import Duckling.Types
 import qualified Duckling.Numeral.Types as TNumeral
-
-ruleIntegers :: Rule
-ruleIntegers = Rule
-  { name = "integer (numeric)"
-  , pattern =
-    [ regex "(\\d{1,18})"
-    ]
-  , prod = \tokens -> case tokens of
-      (Token RegexMatch (GroupMatch (match:_)):_) -> do
-        v <- parseInt match
-        integer $ toInteger v
-      _ -> Nothing
-  }
 
 zeroNineteenMap :: HashMap Text Integer
 zeroNineteenMap = HashMap.fromList
@@ -128,9 +115,9 @@ ruleCompositeTens = Rule
     , numberBetween 1 10
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = tens}):
+      (Token Numeral NumeralData{TNumeral.value = tens}:
        _:
-       Token Numeral (NumeralData {TNumeral.value = units}):
+       Token Numeral NumeralData{TNumeral.value = units}:
        _) -> double $ tens + units
       _ -> Nothing
   }
@@ -164,8 +151,8 @@ ruleCompositeHundreds = Rule
     , numberBetween 1 100
     ]
   , prod = \tokens -> case tokens of
-      (Token Numeral (NumeralData {TNumeral.value = hundreds}):
-       Token Numeral (NumeralData {TNumeral.value = tens}):
+      (Token Numeral NumeralData{TNumeral.value = hundreds}:
+       Token Numeral NumeralData{TNumeral.value = tens}:
        _) -> double $ hundreds + tens
       _ -> Nothing
   }
@@ -176,7 +163,7 @@ ruleDotSpelledOut = Rule
   , pattern =
     [ dimension Numeral
     , regex "цяло и"
-    , numberWith TNumeral.grain isNothing
+    , Predicate $ not . hasGrain
     ]
   , prod = \tokens -> case tokens of
       (Token Numeral nd1:_:Token Numeral nd2:_) ->
@@ -195,20 +182,6 @@ ruleDecimals = Rule
       _ -> Nothing
   }
 
-ruleFractions :: Rule
-ruleFractions = Rule
-  { name = "fractional number"
-  , pattern =
-    [ regex "(\\d+)/(\\d+)"
-    ]
-  , prod = \tokens -> case tokens of
-      (Token RegexMatch (GroupMatch (numerator:denominator:_)):_) -> do
-        n <- parseDecimal False numerator
-        d <- parseDecimal False denominator
-        divide n d
-      _ -> Nothing
-  }
-
 ruleCommas :: Rule
 ruleCommas = Rule
   { name = "comma-separated numbers"
@@ -217,7 +190,7 @@ ruleCommas = Rule
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) ->
-        parseDouble (Text.replace (Text.singleton ',') Text.empty match) >>= double
+        parseDouble (Text.replace "," Text.empty match) >>= double
       _ -> Nothing
   }
 
@@ -226,7 +199,7 @@ ruleSuffixes = Rule
   { name = "suffixes (K,M,G))"
   , pattern =
     [ dimension Numeral
-    , regex "((к|м|г)|(К|М|Г))(?=[\\W$\x20ac\x00a2\x00a3]|$)"
+    , regex "((к|м|г)|(К|М|Г))(?=[\\W$€¢£]|$)"
     ]
   , prod = \tokens ->
       case tokens of
@@ -257,8 +230,7 @@ ruleNegative = Rule
 
 rules :: [Rule]
 rules =
-  [ ruleIntegers
-  , ruleToNineteen
+  [ ruleToNineteen
   , ruleTens
   , rulePowersOfTen
   , ruleCompositeTens
@@ -266,7 +238,6 @@ rules =
   , ruleCompositeHundreds
   , ruleDotSpelledOut
   , ruleDecimals
-  , ruleFractions
   , ruleCommas
   , ruleSuffixes
   , ruleNegative

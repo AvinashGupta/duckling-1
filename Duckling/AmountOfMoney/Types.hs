@@ -28,31 +28,47 @@ import Duckling.Resolve (Resolve(..))
 data Currency
   -- ambiguous
   = Cent
+  | Dinar
+  | Dirham
   | Dollar
   | Pound
+  | Rial
+  | Riyal
   | Unnamed -- e.g. bucks
   -- unambiguous
   | AED
   | AUD
+  | BGN
   | BRL
+  | BYN
+  | CAD
+  | CNY
   | EGP
   | EUR
   | GBP
   | HRK
   | IDR
+  | ILS
   | INR
+  | IQD
+  | JMD
+  | JOD
   | JPY
   | KRW
   | KWD
   | LBP
+  | MAD
   | MYR
   | NOK
+  | NZD
   | PTS
   | QAR
   | RON
+  | RUB
   | SAR
   | SEK
   | SGD
+  | TTD
   | USD
   | VND
   deriving (Eq, Generic, Hashable, Show, Ord, NFData)
@@ -61,28 +77,44 @@ instance ToJSON Currency where
   toJSON Cent    = "cent"
   toJSON Dollar  = "$"
   toJSON Pound   = "\x00a3"
+  toJSON Dinar   = "dinar"
+  toJSON Dirham  = "dirham"
+  toJSON Rial    = "rial"
+  toJSON Riyal   = "riyal"
   toJSON Unnamed = "unknown"
   toJSON AED     = "AED"
   toJSON AUD     = "AUD"
+  toJSON BGN     = "BGN"
   toJSON BRL     = "BRL"
+  toJSON BYN     = "BYN"
+  toJSON CAD     = "CAD"
+  toJSON CNY     = "CNY"
   toJSON EGP     = "EGP"
   toJSON EUR     = "EUR"
   toJSON GBP     = "GBP"
   toJSON HRK     = "HRK"
   toJSON IDR     = "IDR"
+  toJSON ILS     = "ILS"
+  toJSON IQD     = "IQD"
   toJSON INR     = "INR"
+  toJSON JMD     = "JMD"
+  toJSON JOD     = "JOD"
   toJSON JPY     = "JPY"
   toJSON KRW     = "KRW"
   toJSON KWD     = "KWD"
   toJSON LBP     = "LBP"
+  toJSON MAD     = "MAD"
   toJSON MYR     = "MYR"
   toJSON NOK     = "NOK"
+  toJSON NZD     = "NZD"
   toJSON PTS     = "PTS"
   toJSON QAR     = "QAR"
   toJSON RON     = "RON"
+  toJSON RUB     = "RUB"
   toJSON SAR     = "SAR"
   toJSON SEK     = "SEK"
   toJSON SGD     = "SGD"
+  toJSON TTD     = "TTD"
   toJSON USD     = "USD"
   toJSON VND     = "VND"
 
@@ -96,15 +128,19 @@ data AmountOfMoneyData = AmountOfMoneyData
 
 instance Resolve AmountOfMoneyData where
   type ResolvedValue AmountOfMoneyData = AmountOfMoneyValue
-  resolve _ AmountOfMoneyData {value = Nothing, minValue = Nothing, maxValue = Nothing} = Nothing
-  resolve _ AmountOfMoneyData {value = Just value, currency} =
-    Just $ simple currency value
-  resolve _ AmountOfMoneyData {value = Nothing, currency = c, minValue = Just from, maxValue = Just to} =
-    Just $ between c (from, to)
-  resolve _ AmountOfMoneyData {value = Nothing, currency = c, minValue = Just v, maxValue = Nothing} =
-    Just $ above c v
-  resolve _ AmountOfMoneyData {value = Nothing, currency = c, minValue = Nothing, maxValue = Just v} =
-    Just $ under c v
+  resolve _ _ AmountOfMoneyData {value = Nothing, minValue = Nothing
+                              , maxValue = Nothing} = Nothing
+  resolve _ _ AmountOfMoneyData {value = Just value, currency} =
+    Just (simple currency value, False)
+  resolve _ _ AmountOfMoneyData {value = Nothing, currency = c
+                              , minValue = Just from, maxValue = Just to} =
+    Just (between c (from, to), False)
+  resolve _ _ AmountOfMoneyData {value = Nothing, currency = c
+                              , minValue = Just v, maxValue = Nothing} =
+    Just (above c v, False)
+  resolve _ _ AmountOfMoneyData {value = Nothing, currency = c
+                              , minValue = Nothing, maxValue = Just v} =
+    Just (under c v, False)
 
 data IntervalDirection = Above | Under
   deriving (Eq, Generic, Hashable, Ord, Show, NFData)

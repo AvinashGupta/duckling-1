@@ -19,37 +19,44 @@ import Prelude
 import qualified Data.HashSet as HashSet
 
 import Duckling.Dimensions.Types
+import Duckling.Locale
+import Duckling.Types
 import qualified Duckling.Dimensions.Common as CommonDimensions
 import qualified Duckling.Dimensions.AR as ARDimensions
 import qualified Duckling.Dimensions.BG as BGDimensions
 import qualified Duckling.Dimensions.CS as CSDimensions
 import qualified Duckling.Dimensions.DA as DADimensions
 import qualified Duckling.Dimensions.DE as DEDimensions
+import qualified Duckling.Dimensions.EL as ELDimensions
 import qualified Duckling.Dimensions.EN as ENDimensions
 import qualified Duckling.Dimensions.ES as ESDimensions
 import qualified Duckling.Dimensions.ET as ETDimensions
+import qualified Duckling.Dimensions.FI as FIDimensions
 import qualified Duckling.Dimensions.FR as FRDimensions
 import qualified Duckling.Dimensions.GA as GADimensions
 import qualified Duckling.Dimensions.HE as HEDimensions
+import qualified Duckling.Dimensions.HI as HIDimensions
 import qualified Duckling.Dimensions.HR as HRDimensions
 import qualified Duckling.Dimensions.HU as HUDimensions
 import qualified Duckling.Dimensions.ID as IDDimensions
 import qualified Duckling.Dimensions.IT as ITDimensions
 import qualified Duckling.Dimensions.JA as JADimensions
+import qualified Duckling.Dimensions.KA as KADimensions
 import qualified Duckling.Dimensions.KO as KODimensions
 import qualified Duckling.Dimensions.MY as MYDimensions
 import qualified Duckling.Dimensions.NB as NBDimensions
+import qualified Duckling.Dimensions.NE as NEDimensions
 import qualified Duckling.Dimensions.NL as NLDimensions
 import qualified Duckling.Dimensions.PL as PLDimensions
 import qualified Duckling.Dimensions.PT as PTDimensions
 import qualified Duckling.Dimensions.RO as RODimensions
 import qualified Duckling.Dimensions.RU as RUDimensions
 import qualified Duckling.Dimensions.SV as SVDimensions
+import qualified Duckling.Dimensions.TA as TADimensions
 import qualified Duckling.Dimensions.TR as TRDimensions
 import qualified Duckling.Dimensions.UK as UKDimensions
 import qualified Duckling.Dimensions.VI as VIDimensions
 import qualified Duckling.Dimensions.ZH as ZHDimensions
-import Duckling.Lang
 
 allDimensions :: Lang -> [Some Dimension]
 allDimensions lang = CommonDimensions.allDimensions ++ langDimensions lang
@@ -77,6 +84,7 @@ dependents (This Time) =
 dependents (This TimeGrain) = HashSet.empty
 dependents (This Url) = HashSet.empty
 dependents (This Volume) = HashSet.singleton (This Numeral)
+dependents (This (CustomDimension dim)) = dimDependents dim
 
 langDimensions :: Lang -> [Some Dimension]
 langDimensions AR = ARDimensions.allDimensions
@@ -84,26 +92,32 @@ langDimensions BG = BGDimensions.allDimensions
 langDimensions CS = CSDimensions.allDimensions
 langDimensions DA = DADimensions.allDimensions
 langDimensions DE = DEDimensions.allDimensions
+langDimensions EL = ELDimensions.allDimensions
 langDimensions EN = ENDimensions.allDimensions
 langDimensions ES = ESDimensions.allDimensions
 langDimensions ET = ETDimensions.allDimensions
+langDimensions FI = FIDimensions.allDimensions
 langDimensions FR = FRDimensions.allDimensions
 langDimensions GA = GADimensions.allDimensions
 langDimensions HE = HEDimensions.allDimensions
+langDimensions HI = HIDimensions.allDimensions
 langDimensions HR = HRDimensions.allDimensions
 langDimensions HU = HUDimensions.allDimensions
 langDimensions ID = IDDimensions.allDimensions
 langDimensions IT = ITDimensions.allDimensions
 langDimensions JA = JADimensions.allDimensions
+langDimensions KA = KADimensions.allDimensions
 langDimensions KO = KODimensions.allDimensions
 langDimensions MY = MYDimensions.allDimensions
 langDimensions NB = NBDimensions.allDimensions
+langDimensions NE = NEDimensions.allDimensions
 langDimensions NL = NLDimensions.allDimensions
 langDimensions PL = PLDimensions.allDimensions
 langDimensions PT = PTDimensions.allDimensions
 langDimensions RO = RODimensions.allDimensions
 langDimensions RU = RUDimensions.allDimensions
 langDimensions SV = SVDimensions.allDimensions
+langDimensions TA = TADimensions.allDimensions
 langDimensions TR = TRDimensions.allDimensions
 langDimensions UK = UKDimensions.allDimensions
 langDimensions VI = VIDimensions.allDimensions

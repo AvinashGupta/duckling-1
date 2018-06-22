@@ -11,7 +11,8 @@
 {-# LANGUAGE NoRebindableSyntax #-}
 
 module Duckling.Numeral.HU.Rules
-  ( rules ) where
+  ( rules
+  ) where
 
 import Data.HashMap.Strict (HashMap)
 import Data.Maybe
@@ -27,20 +28,6 @@ import Duckling.Numeral.Types (NumeralData (..))
 import Duckling.Regex.Types
 import Duckling.Types
 import qualified Duckling.Numeral.Types as TNumeral
-
-ruleIntegerNumeric :: Rule
-ruleIntegerNumeric = Rule
-  { name = "integer (numeric)"
-  , pattern =
-    [ regex "(\\d{1,18})"
-    ]
-  , prod = \tokens -> case tokens of
-      (Token RegexMatch (GroupMatch (match:_)):
-       _) -> do
-         v <- parseInt match
-         integer $ toInteger v
-      _ -> Nothing
-  }
 
 ruleNumeralMap :: HashMap Text Integer
 ruleNumeralMap = HashMap.fromList
@@ -120,8 +107,8 @@ ruleTwentyoneToTwentynine = Rule
       _ -> Nothing
   }
 
-dozensMap :: HashMap Text Integer
-dozensMap = HashMap.fromList
+tensMap :: HashMap Text Integer
+tensMap = HashMap.fromList
   [ ( "h\x00FAsz", 20 )
   , ( "harminc", 30 )
   , ( "negyven", 40 )
@@ -136,11 +123,11 @@ ruleTens :: Rule
 ruleTens = Rule
   { name = "integer (20,30..90)"
   , pattern =
-    [ regex "(h\x00FAsz|harminc|negyven|\x00f6tven|hatvan|hetven|nyolcvan|kilencven)"
+    [ regex "(h\x00FAsz|harminc|negyven|ötven|hatvan|hetven|nyolcvan|kilencven)"
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (match:_)):_) ->
-        HashMap.lookup (Text.toLower match) dozensMap >>= integer
+        HashMap.lookup (Text.toLower match) tensMap >>= integer
       _ -> Nothing
   }
 
@@ -152,7 +139,7 @@ ruleCompositeTens = Rule
     ]
   , prod = \tokens -> case tokens of
       (Token RegexMatch (GroupMatch (m1:m2:_)):_) -> do
-        v1 <- HashMap.lookup (Text.toLower m1) dozensMap
+        v1 <- HashMap.lookup (Text.toLower m1) tensMap
         v2 <- HashMap.lookup (Text.toLower m2) ruleNumeralMap
         integer $ v1 + v2
       _ -> Nothing
@@ -160,8 +147,7 @@ ruleCompositeTens = Rule
 
 rules :: [Rule]
 rules =
-  [ ruleIntegerNumeric
-  , ruleNumeral
+  [ ruleNumeral
   , ruleElevenToNineteen
   , ruleTwentyoneToTwentynine
   , ruleTens
